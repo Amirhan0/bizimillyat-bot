@@ -62,7 +62,7 @@ bot.on('new_chat_members', async (msg) => {
             const checkMessage = getRandomPhrase(activeCheck).replace("{name}", newMember.first_name);
             bot.sendMessage(chatId, checkMessage);
         }
-    }, 300000);
+    }, 10000);
 });
 
 // Запускаем сервер
