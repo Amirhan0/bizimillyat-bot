@@ -1,19 +1,29 @@
-const telegramBot = require("node-telegram-bot-api")
+const express = require("express");
+const bodyParser = require("body-parser");
+const TelegramBot = require("node-telegram-bot-api");
 
-const BOT_TOKEN = '7882038455:AAGjDAlwlQP2FO2WklvL7WxfjQcht34N7gE'
+const BOT_TOKEN = '7882038455:AAGjDAlwlQP2FO2WklvL7WxfjQcht34N7gE';
+const bot = new TelegramBot(BOT_TOKEN);
 
-const bot = new telegramBot(BOT_TOKEN, {polling: true})
+// Создаем Express-приложение
+const app = express();
+app.use(bodyParser.json());
 
-console.log('Бот запущен')
+// Устанавливаем вебхук для бота
+const PORT = 3000;
+bot.setWebHook(`https://bizimillyat-bot.onrender.com/`);
 
-bot.on('polling-error', (error) =>  {
-    console.error('Ошибка при запуске бота!', error)
-})
+// Обработка обновлений
+app.post(`/${BOT_TOKEN}`, (req, res) => {
+    const update = req.body;
+    bot.processUpdate(update);
+    res.sendStatus(200);
+});
 
-
+// Функция для получения случайной фразы
 function getRandomPhrase(phrases) {
-    const randomIndex = Math.floor(Math.random() * phrases.length)
-    return phrases[randomIndex]
+    const randomIndex = Math.floor(Math.random() * phrases.length);
+    return phrases[randomIndex];
 }
 
 const greetings = [
@@ -34,24 +44,28 @@ const activeCheck = [
 
 function wait(sec) {
     return new Promise((resolve) => {
-        setTimeout(resolve, sec * 1000)
-    })
+        setTimeout(resolve, sec * 1000);
+    });
 }
-
 
 bot.on('new_chat_members', async (msg) => {
     const newMember = msg.new_chat_member;
-    const chatId = msg.chat.id
+    const chatId = msg.chat.id;
 
-    await wait(5)
-    const welcomeMessage = getRandomPhrase(greetings).replace("{name}", newMember.first_name)
+    await wait(5);
+    const welcomeMessage = getRandomPhrase(greetings).replace("{name}", newMember.first_name);
     bot.sendMessage(chatId, welcomeMessage);
     setTimeout(async () => {
-        const chatMember = await bot.getChatMember(chatId, newMember.id)
+        const chatMember = await bot.getChatMember(chatId, newMember.id);
 
         if (chatMember.status === 'member') {
-            const checkMessage = getRandomPhrase(activeCheck).replace("{name}", newMember.first_name)
+            const checkMessage = getRandomPhrase(activeCheck).replace("{name}", newMember.first_name);
             bot.sendMessage(chatId, checkMessage);
         }
-    }, 300000)
-})
+    }, 300000);
+});
+
+// Запускаем сервер
+app.listen(PORT, () => {
+    console.log(`Бот запущен на порту ${PORT}`);
+});
