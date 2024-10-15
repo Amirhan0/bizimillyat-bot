@@ -11,7 +11,7 @@ app.use(bodyParser.json());
 
 // Устанавливаем вебхук для бота
 const PORT = 3000;
-bot.setWebHook(`https://bizimillyat-bot.onrender.com/`);
+bot.setWebHook(`https://bizimillyat-bot.onrender.com/${BOT_TOKEN}`);
 
 // Обработка обновлений
 app.post(`/${BOT_TOKEN}`, (req, res) => {
