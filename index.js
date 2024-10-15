@@ -37,12 +37,21 @@ const activeCheck = [
     "{name}, хале де бурдасан? Бир шей яз! Или ты уже стал призраком?",
     "Йо, {name}, где ты? Мы тут уже начали без тебя! А может, ты просто потерялся?"
 ];
+
 const responseMessages = [
     "Салам! Кош гелдин! Бак, я́лмы, сену гёрмэк у́чун кутудук! 😄",
     "Салам, {name}! Сени бурда гормэдигим чун, гальмудун! 🎉",
     "Саламат кэлдин, биз бак да жадалэн кутудук! 🍪",
     "Сен гельмесен, биз старгиз кэчиририк! 👻",
     "Санлда бир патнолар! Миссир гюлдüн! 🎊"
+];
+
+const farewellMessages = [
+    "Салам, {name}! Ушбу чата гош кетдин! Кечир, биз сени жадалэн кутудук! 😢",
+    "Эх, {name}, кэчир! Биз сени жадалэн кутудук, бу шейрда енисин! 👋",
+    "Сан хош, {name}! Ушбу чата гош кетдин, ами биз сени жадалэн кутудук! 🥺",
+    "{name}, ты ушёл! Хош! Сени жадалэн кутудук! 🎈",
+    "Кечир, {name}, сени бурда көрмэсек! Хош гелдин! 💔"
 ];
 
 function wait(sec) {
@@ -67,18 +76,26 @@ bot.on('new_chat_members', async (msg) => {
         const chatMember = await bot.getChatMember(chatId, newMember.id);
         if (chatMember.status === 'member') {
             const checkMessage = getRandomPhrase(activeCheck).replace("{name}", `@${newMember.username || newMember.first_name}`);
-            const response = await bot.sendMessage(chatId, checkMessage);
+            await bot.sendMessage(chatId, checkMessage);
             
             const messageListener = (message) => {
                 if (message.reply_to_message && message.reply_to_message.message_id === welcomeResponse.message_id) {
-                    const followUpMessage = getRandomPhrase(responseMessages);
-                    bot.sendMessage(chatId, followUpMessage.replace("{name}", message.from.first_name));
-                    bot.removeListener('message', messageListener);
+                    const followUpMessage = getRandomPhrase(responseMessages).replace("{name}", message.from.first_name);
+                    bot.sendMessage(chatId, followUpMessage);
+                    bot.removeListener('message', messageListener); 
                 }
             };
             bot.on('message', messageListener);
         }
     }, timeoutMillis);
+});
+
+bot.on('left_chat_member', (msg) => {
+    const leftMember = msg.left_chat_member;
+    const chatId = msg.chat.id;
+
+    const farewellMessage = getRandomPhrase(farewellMessages).replace("{name}", `@${leftMember.username || leftMember.first_name}`);
+    bot.sendMessage(chatId, farewellMessage);
 });
 
 app.listen(PORT, () => {
