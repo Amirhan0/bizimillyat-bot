@@ -61,8 +61,28 @@ function wait(sec) {
 }
 
 let awaitingResponses = {};
+const INACTIVITY_PERIOD = 2 * 24 * 60 * 60 * 1000; // 2 дня в миллисекундах
 
-// Обработка новых участников
+// Функция для проверки статуса участников
+async function checkUserActivity() {
+    const now = Date.now();
+
+    for (const userId in awaitingResponses) {
+        const userData = awaitingResponses[userId];
+        const lastActivityTime = userData.lastActiveTime || now;
+
+        if (now - lastActivityTime > INACTIVITY_PERIOD) {
+            const chatId = userData.chatId;
+            const message = `Привет, ${userData.first_name}! Хардасын? Ики гюн сян охтурсун, бищейми олду?`;
+            await bot.sendMessage(chatId, message);
+            delete awaitingResponses[userId]; // Удаляем пользователя из ожидающих
+        }
+    }
+}
+
+// Запускаем проверку активности каждые 12 часов
+setInterval(checkUserActivity, 12 * 60 * 60 * 1000);
+
 bot.on('new_chat_members', async (msg) => {
     const newMember = msg.new_chat_member;
     const chatId = msg.chat.id;
@@ -71,9 +91,9 @@ bot.on('new_chat_members', async (msg) => {
 
     let memberTag;
     if (newMember.username) {
-        memberTag = `@${newMember.username}`; // Если есть username, упоминаем по нему
+        memberTag = `@${newMember.username}`; 
     } else {
-        memberTag = `[${newMember.first_name}](tg://user?id=${newMember.id})`; // Если нет username, упоминаем по user ID
+        memberTag = `[${newMember.first_name}](tg://user?id=${newMember.id})`; 
     }
 
     const welcomeMessage = getRandomPhrase(greetings).replace("{name}", memberTag);
@@ -82,6 +102,7 @@ bot.on('new_chat_members', async (msg) => {
     awaitingResponses[newMember.id] = {
         chatId: chatId,
         first_name: newMember.first_name,
+        lastActiveTime: Date.now(), // Устанавливаем текущее время как время активности
         timeout: setTimeout(async () => {
             const chatMember = await bot.getChatMember(chatId, newMember.id);
 
@@ -112,7 +133,10 @@ bot.on('message', (msg) => {
 
         const thankYouMessage = getRandomPhrase(thankYouMessages).replace("{name}", msg.from.first_name);
         bot.sendMessage(chatId, thankYouMessage);
-        
+
+        // Обновляем время последней активности
+        awaitingResponses[userId].lastActiveTime = Date.now();
+
         delete awaitingResponses[userId]; 
     }
 });
