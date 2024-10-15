@@ -5,9 +5,11 @@ const TelegramBot = require("node-telegram-bot-api");
 const BOT_TOKEN = '7882038455:AAGjDAlwlQP2FO2WklvL7WxfjQcht34N7gE';
 const bot = new TelegramBot(BOT_TOKEN);
 
+// Создаем Express-приложение
 const app = express();
 app.use(bodyParser.json());
 
+// Устанавливаем вебхук для бота
 const PORT = 3000;
 bot.setWebHook(`https://bizimillyat-bot.onrender.com/${BOT_TOKEN}`);
 
@@ -23,87 +25,103 @@ function getRandomPhrase(phrases) {
 }
 
 const greetings = [
-    "Салам, {name}! Добро пожаловать в чат! Слышал, тут раздают печеньки! 🍪",
-    "Салам, {name}! Рад тебя видеть! Говорят, ты супергерой! 🦸‍♂️",
-    "Салам, {name}! Добро пожаловать! Готовься, сейчас будет весело! 🎉",
-    "Салам, {name}! Не стой в стороне! У нас тут танцы и конкурс на лучшее селфи! 📸",
-    "Салам, {name}! Как дела? Рад тебя видеть! Заходи, у нас тут веселье! 😄"
+    "Салам алейкум, {name}! Хош гялдин джаным",
+    "Салам алейкум, {name}, сени гордюм, и олдум!",
+    "Салам алейкум, {name}! Хош гялдин!",
+    "Салам алейкумляр, {name}! Буюр, чекинмя!",
+    "Салам алейкум, {name}! Начасян? Сени гордюм, чок гезяль олдум!"
 ];
 
 const activeCheck = [
-    "{name}, ты здесь? Пожалуйста, ответь! Не прячься, мы не кусаемся! 😜",
-    "{name}, где ты? Ответь! У нас тут веселье, не упусти его! 🎊",
-    "Эй, {name}, ты с нами? Ждем твоего ответа. Надеюсь, ты не застрял в пробке! 🚦",
-    "{name}, ты все еще здесь? Напиши что-нибудь! Или ты уже стал призраком? 👻",
-    "Эй, {name}, где ты? Мы начали без тебя! Может, ты просто потерялся? 🧭"
+    "{name}, бурдасын сян??.",
+    "{name}, йоха чихма, дзаваб вер",
+    "Эй, {name}, бизимлсясин? Дзавабаны гозлеик",
+    "{name}, бурдасын? Бир щей яз я Алла!"
 ];
 
-const responseMessages = [
-    "Салам! Ура, ты пришёл! Мы тебя ждали! 😄",
-    "Салам, {name}! Я думал, ты призрак! 🎉",
-    "Отлично, что ты здесь! Мы уже приготовили печеньки! 🍪",
-    "Ура, ты пришёл! А что, если устроим вечеринку? 🎊",
-    "Ты не представляешь, как мы по тебе скучали! 😃"
+const thankYouMessages = [
+    "Тешекюр эдерим, {name}, сянин дзавабаны алдим сагол!",
+    "Дзавабан учуня тещекюляр, {name}!",
+    "{name}, сагол, дзавабан учун!",
+    "Не яхши ки дзавабаны вердин, {name}!"
 ];
 
-const farewellMessages = [
-    "Салам, {name}! Ты покинул чат! Жаль, мы тебя ждали! 😢",
-    "Эх, {name}, жаль! Мы тебя ждали, а ты ушёл! 👋",
-    "Пока, {name}! Ты покинул чат, а мы тебя ждали! 🥺",
-    "{name}, ты ушёл! Пока! Мы тебя ждали! 🎈",
-    "Жаль, {name}, что тебя больше нет! Пока, надеемся, увидимся снова! 💔"
+const leaveMessages = [
+    "Ох, {name} бизи тярк етти...",
+    "{name}, сагол, горющурюз!",
+    "Горющундук, {name}. Гял еня!",
+    "Тясуф ки, {name} артык бизимля деил."
 ];
 
+// Функция для ожидания
 function wait(sec) {
     return new Promise((resolve) => {
         setTimeout(resolve, sec * 1000);
     });
 }
 
+let awaitingResponses = {};
+
+// Обработка новых участников
 bot.on('new_chat_members', async (msg) => {
     const newMember = msg.new_chat_member;
     const chatId = msg.chat.id;
 
-    await wait(5);
+    await wait(5); 
 
-    const welcomeMessage = getRandomPhrase(greetings).replace("{name}", `@${newMember.username || newMember.first_name}`);
-    const welcomeResponse = await bot.sendMessage(chatId, welcomeMessage);
+    let memberTag;
+    if (newMember.username) {
+        memberTag = `@${newMember.username}`; // Если есть username, упоминаем по нему
+    } else {
+        memberTag = `[${newMember.first_name}](tg://user?id=${newMember.id})`; // Если нет username, упоминаем по user ID
+    }
 
-    const timeoutMinutes = 10; 
-    const timeoutMillis = timeoutMinutes * 60 * 1000; 
+    const welcomeMessage = getRandomPhrase(greetings).replace("{name}", memberTag);
+    bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
 
-    setTimeout(async () => {
-        const chatMember = await bot.getChatMember(chatId, newMember.id);
-        if (chatMember.status === 'member') {
-            const checkMessage = getRandomPhrase(activeCheck).replace("{name}", `@${newMember.username || newMember.first_name}`);
-            await bot.sendMessage(chatId, checkMessage);
-            setTimeout(async () => {
-                const updatedChatMember = await bot.getChatMember(chatId, newMember.id);
-                if (updatedChatMember.status === 'member') {
-                    await bot.kickChatMember(chatId, newMember.id);
-                    const kickMessage = `${newMember.first_name} был кикнут из-за отсутствия ответа! Пока 😔`;
-                    await bot.sendMessage(chatId, kickMessage);
-                }
-            }, timeoutMillis); 
+    awaitingResponses[newMember.id] = {
+        chatId: chatId,
+        first_name: newMember.first_name,
+        timeout: setTimeout(async () => {
+            const chatMember = await bot.getChatMember(chatId, newMember.id);
 
-            const messageListener = (message) => {
-                if (message.reply_to_message && message.reply_to_message.message_id === welcomeResponse.message_id) {
-                    const followUpMessage = getRandomPhrase(responseMessages).replace("{name}", message.from.first_name);
-                    bot.sendMessage(chatId, followUpMessage);
-                    bot.removeListener('message', messageListener); 
-                }
-            };
-            bot.on('message', messageListener);
-        }
-    }, timeoutMillis);
+            if (chatMember.status === 'member') {
+                const checkMessage = getRandomPhrase(activeCheck).replace("{name}", memberTag);
+                bot.sendMessage(chatId, checkMessage, { parse_mode: 'Markdown' });
+
+                awaitingResponses[newMember.id].kickTimeout = setTimeout(async () => {
+                    const chatMember = await bot.getChatMember(chatId, newMember.id);
+                    if (chatMember.status === 'member') {
+                        bot.kickChatMember(chatId, newMember.id);
+                        bot.sendMessage(chatId, `${newMember.first_name}, давай гагаш ты салам не закинул.`);
+                        delete awaitingResponses[newMember.id]; 
+                    }
+                }, 1200000); 
+            }
+        }, 10000) 
+    };
+});
+
+bot.on('message', (msg) => {
+    const userId = msg.from.id;
+    const chatId = msg.chat.id;
+
+    if (awaitingResponses[userId] && awaitingResponses[userId].chatId === chatId) {
+        clearTimeout(awaitingResponses[userId].timeout);
+        clearTimeout(awaitingResponses[userId].kickTimeout);
+
+        const thankYouMessage = getRandomPhrase(thankYouMessages).replace("{name}", msg.from.first_name);
+        bot.sendMessage(chatId, thankYouMessage);
+        
+        delete awaitingResponses[userId]; 
+    }
 });
 
 bot.on('left_chat_member', (msg) => {
     const leftMember = msg.left_chat_member;
     const chatId = msg.chat.id;
-
-    const farewellMessage = getRandomPhrase(farewellMessages).replace("{name}", `@${leftMember.username || leftMember.first_name}`);
-    bot.sendMessage(chatId, farewellMessage);
+    const leaveMessage = getRandomPhrase(leaveMessages).replace("{name}", leftMember.first_name);
+    bot.sendMessage(chatId, leaveMessage);
 });
 
 app.listen(PORT, () => {
