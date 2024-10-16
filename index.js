@@ -26,7 +26,7 @@ async function getAIResponse(prompt) {
         { inputs: prompt },
         {
             headers: {
-                Authorization: `Bearer В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` // Ваш токен Hugging Face
+                Authorization: `Bearer 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` // Ваш токен Hugging Face
             }
         }
     );
