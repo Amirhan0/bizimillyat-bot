@@ -1,11 +1,8 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const TelegramBot = require("node-telegram-bot-api");
-const axios = require("axios"); // Импортируем axios для HTTP-запросов
-const { HfInference } = require("@huggingface/inference"); // Измените эту строку
 const BOT_TOKEN = '7882038455:AAGjDAlwlQP2FO2WklvL7WxfjQcht34N7gE';
 const bot = new TelegramBot(BOT_TOKEN);
-const inference = new HfInference("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");
 
 // Создаем Express-приложение
 const app = express();
@@ -20,35 +17,6 @@ app.post(`/${BOT_TOKEN}`, (req, res) => {
     bot.processUpdate(update);
     res.sendStatus(200);
 });
-async function getResponse(message) {
-    try {
-        const response = await inference.textGeneration({
-            model: "EleutherAI/gpt-neo-1.3B",
-            inputs: message,
-            parameters: {
-                max_length: 100,  // Ограничим длину ответа
-                do_sample: true,
-                temperature: 0.7, // Уменьшаем температуру для стабильности
-            },
-        });
-
-        console.log('Response:', response); // Для отладки
-
-        // Проверяем структуру ответа
-        if (response && typeof response === 'object' && response.generated_text) {
-            return response.generated_text; // Возвращаем сгенерированный текст
-        } else {
-            console.error('Unexpected response structure:', response);
-            return "Извините, произошла ошибка при получении ответа.";
-        }
-    } catch (error) {
-        console.error('Error fetching response:', error.message);
-        return "Извините, произошла ошибка при получении ответа.";
-    }
-}
-
-// Пример вызова функции
-getResponse("Как ты").then(console.log).catch(console.error);
 
 function getRandomPhrase(phrases) {
     const randomIndex = Math.floor(Math.random() * phrases.length);
@@ -104,7 +72,7 @@ async function checkUserActivity() {
             const chatId = userData.chatId;
             const message = `Привет, ${userData.first_name}! Хардасын? Ики гюн сян охтурсун, бищейми олду?`;
             await bot.sendMessage(chatId, message);
-            delete awaitingResponses[userId]; 
+            delete awaitingResponses[userId];
         }
     }
 }
@@ -143,11 +111,11 @@ bot.on('new_chat_members', async (msg) => {
                     if (chatMember.status === 'member') {
                         bot.kickChatMember(chatId, newMember.id);
                         bot.sendMessage(chatId, `${newMember.first_name}, давай гагаш ты салам не закинул.`);
-                        delete awaitingResponses[newMember.id]; 
+                        delete awaitingResponses[newMember.id];
                     }
                 }, 1200000); 
             }
-        }, 10000) 
+        }, 10000)
     };
 });
 
@@ -163,7 +131,7 @@ bot.on('message', (msg) => {
         bot.sendMessage(chatId, thankYouMessage);
         awaitingResponses[userId].lastActiveTime = Date.now();
 
-        delete awaitingResponses[userId]; 
+        delete awaitingResponses[userId];
     }
 });
 
@@ -190,20 +158,6 @@ bot.onText(/\/помощь/, (msg) => {
 `;
 
     bot.sendMessage(chatId, helpMessage);
-});
-
-// Команда /ai
-bot.onText(/\/ai (.+)/, async (msg, match) => {
-    const chatId = msg.chat.id;
-    const userInput = match[1]; // Получаем текст после /ai
-
-    try {
-        const aiResponse = await getAIResponse(userInput);
-        bot.sendMessage(chatId, aiResponse);
-    } catch (error) {
-        console.error(error);
-        bot.sendMessage(chatId, "Произошла ошибка при обработке вашего запроса.");
-    }
 });
 
 // Массив цитат
@@ -236,6 +190,20 @@ bot.onText(/\/цитата/, (msg) => {
     const randomQuote = getRandomPhrase(stathamQuotes);
     bot.sendMessage(chatId, randomQuote);
 });
+
+// Команда для установки напоминания
+bot.onText(/\/напомни (.+) через (\d+) минут/, (msg, match) => {
+    const chatId = msg.chat.id;
+    const reminder = match[1];
+    const minutes = parseInt(match[2]);
+
+    bot.sendMessage(chatId, `Окей! Я напомню тебе через ${minutes} минут: "${reminder}".`);
+
+    setTimeout(() => {
+        bot.sendMessage(chatId, `Напоминание: "${reminder}"`);
+    }, minutes * 60 * 1000);
+});
+
 
 // Запуск сервера
 app.listen(PORT, () => {
