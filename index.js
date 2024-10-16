@@ -2,9 +2,10 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const TelegramBot = require("node-telegram-bot-api");
 const axios = require("axios"); // Импортируем axios для HTTP-запросов
-
+const { HfInference } = require("@huggingface/inference"); // Измените эту строку
 const BOT_TOKEN = '7882038455:AAGjDAlwlQP2FO2WklvL7WxfjQcht34N7gE';
 const bot = new TelegramBot(BOT_TOKEN);
+const inference = new HfInference("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");
 
 // Создаем Express-приложение
 const app = express();
@@ -19,21 +20,35 @@ app.post(`/${BOT_TOKEN}`, (req, res) => {
     bot.processUpdate(update);
     res.sendStatus(200);
 });
+async function getResponse(message) {
+    try {
+        const response = await inference.textGeneration({
+            model: "EleutherAI/gpt-neo-1.3B",
+            inputs: message,
+            parameters: {
+                max_length: 100,  // Ограничим длину ответа
+                do_sample: true,
+                temperature: 0.7, // Уменьшаем температуру для стабильности
+            },
+        });
 
-async function getAIResponse(prompt) {
-    const response = await axios.post(
-        'https://api-inference.huggingface.co/models/arcee-ai/SuperNova-Medius', // Указываем нужную модель
-        { inputs: prompt },
-        {
-            headers: {
-                Authorization: `Bearer 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` // Ваш токен Hugging Face
-            }
+        console.log('Response:', response); // Для отладки
+
+        // Проверяем структуру ответа
+        if (response && typeof response === 'object' && response.generated_text) {
+            return response.generated_text; // Возвращаем сгенерированный текст
+        } else {
+            console.error('Unexpected response structure:', response);
+            return "Извините, произошла ошибка при получении ответа.";
         }
-    );
-
-    return response.data[0]?.generated_text || "Извините, я не могу с этим помочь.";
+    } catch (error) {
+        console.error('Error fetching response:', error.message);
+        return "Извините, произошла ошибка при получении ответа.";
+    }
 }
 
+// Пример вызова функции
+getResponse("Как ты").then(console.log).catch(console.error);
 
 function getRandomPhrase(phrases) {
     const randomIndex = Math.floor(Math.random() * phrases.length);
