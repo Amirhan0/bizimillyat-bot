@@ -196,11 +196,13 @@ bot.onText(/\/напомни (.+) через (\d+) минут/, (msg, match) => 
     const chatId = msg.chat.id;
     const reminder = match[1];
     const minutes = parseInt(match[2]);
+    const userId = msg.from.id;
+    const userName = msg.from.username ? `@${msg.from.username}` : `[${msg.from.first_name}](tg://user?id=${userId})`;
 
     bot.sendMessage(chatId, `Окей! Я напомню тебе через ${minutes} минут: "${reminder}".`);
 
     setTimeout(() => {
-        bot.sendMessage(chatId, `Напоминание: "${reminder}"`);
+        bot.sendMessage(chatId, `Напоминание для ${userName}: "${reminder}"`, { parse_mode: 'Markdown' });
     }, minutes * 60 * 1000);
 });
 
