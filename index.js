@@ -53,7 +53,18 @@ const leaveMessages = [
     "Тясуф ки, {name} артык бизимля деил."
 ];
 
-// Функция для ожидания
+const forbiddenWords = [
+    "блядь", "сука", "ебать", "мудак", "пиздец", "хуй", "заебал", "пиздa", "долбаеб", "говно",
+    "амына", "сикем", "габан", "сиктир", "гиждыллах", "ам", "сиктиш", "анасыны"
+]; 
+
+const warningMessages = [
+    "Эй, {name}, еля демя!",
+    "{name}, тише тише сюкют!.",
+    "Я Алла еля демя, {name}.",
+    "{name}, запарил матерится!"
+]
+
 function wait(sec) {
     return new Promise((resolve) => {
         setTimeout(resolve, sec * 1000);
@@ -61,9 +72,7 @@ function wait(sec) {
 }
 
 let awaitingResponses = {};
-const INACTIVITY_PERIOD = 2 * 24 * 60 * 60 * 1000; // 2 дня в миллисекундах
-
-// Функция для проверки статуса участников
+const INACTIVITY_PERIOD = 2 * 24 * 60 * 60 * 1000;
 async function checkUserActivity() {
     const now = Date.now();
 
@@ -79,9 +88,13 @@ async function checkUserActivity() {
         }
     }
 }
-
-// Запускаем проверку активности каждые 12 часов
 setInterval(checkUserActivity, 12 * 60 * 60 * 1000);
+
+// Проверка сообщений на наличие запрещенных слов
+function containsForbiddenWords(message) {
+    const lowerCaseMessage = message.toLowerCase();
+    return forbiddenWords.some(word => lowerCaseMessage.includes(word));
+}
 
 bot.on('new_chat_members', async (msg) => {
     const newMember = msg.new_chat_member;
@@ -102,7 +115,7 @@ bot.on('new_chat_members', async (msg) => {
     awaitingResponses[newMember.id] = {
         chatId: chatId,
         first_name: newMember.first_name,
-        lastActiveTime: Date.now(), // Устанавливаем текущее время как время активности
+        lastActiveTime: Date.now(),
         timeout: setTimeout(async () => {
             const chatMember = await bot.getChatMember(chatId, newMember.id);
 
@@ -126,6 +139,14 @@ bot.on('new_chat_members', async (msg) => {
 bot.on('message', (msg) => {
     const userId = msg.from.id;
     const chatId = msg.chat.id;
+    const messageText = msg.text || ""; // Получаем текст сообщения
+
+    // Проверяем на запрещенные слова
+    if (containsForbiddenWords(messageText)) {
+        const warningMessage = getRandomPhrase(warningMessages).replace("{name}", msg.from.first_name);
+        bot.sendMessage(chatId, warningMessage);
+        return; // Прекращаем дальнейшую обработку сообщения
+    }
 
     if (awaitingResponses[userId] && awaitingResponses[userId].chatId === chatId) {
         clearTimeout(awaitingResponses[userId].timeout);
@@ -133,8 +154,6 @@ bot.on('message', (msg) => {
 
         const thankYouMessage = getRandomPhrase(thankYouMessages).replace("{name}", msg.from.first_name);
         bot.sendMessage(chatId, thankYouMessage);
-
-        // Обновляем время последней активности
         awaitingResponses[userId].lastActiveTime = Date.now();
 
         delete awaitingResponses[userId]; 
@@ -146,6 +165,24 @@ bot.on('left_chat_member', (msg) => {
     const chatId = msg.chat.id;
     const leaveMessage = getRandomPhrase(leaveMessages).replace("{name}", leftMember.first_name);
     bot.sendMessage(chatId, leaveMessage);
+});
+
+bot.onText(/\/help/, (msg) => {
+    const chatId = msg.chat.id;
+
+    const helpMessage = `
+Салам алейкум! Вот что я умею:
+1. Приветствую новых участников чата.
+2. Проверяю сообщения на наличие запрещенных слов (матов) и предупреждаю об этом.
+3. Проверяю активность участников и напоминаю о себе, если ты долго не отвечаешь.
+4. Автоматически удаляю неактивных пользователей, если они не проявляют активности после вступления в чат.
+5. Отправляю благодарственные сообщения за активность.
+6. Регистрирую, когда участник покидает чат.
+
+Если у тебя есть вопросы, пиши сюда!
+`;
+
+    bot.sendMessage(chatId, helpMessage);
 });
 
 app.listen(PORT, () => {
