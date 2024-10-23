@@ -90,6 +90,9 @@ bot.on('new_chat_members', async (msg) => {
         memberTag = `[${newMember.first_name}](tg://user?id=${newMember.id})`; 
     }
 
+    const voiceFile = 'salam.mp3';
+
+     await bot.sendVoice(chatId, voiceFile);
     const welcomeMessage = getRandomPhrase(greetings).replace("{name}", memberTag);
     bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
 
@@ -185,21 +188,6 @@ bot.onText(/\/цитата/, (msg) => {
     const randomQuote = getRandomPhrase(stathamQuotes);
     bot.sendMessage(chatId, randomQuote);
 });
-bot.onText(/\/напомни (.+) через (\d+) минут/, (msg, match) => {
-    const chatId = msg.chat.id;
-    const reminder = match[1];
-    const minutes = parseInt(match[2]);
-    const userId = msg.from.id;
-    const userName = msg.from.username ? `@${msg.from.username}` : `[${msg.from.first_name}](tg://user?id=${userId})`;
-
-    bot.sendMessage(chatId, `Окей! Я напомню тебе через ${minutes} минут: "${reminder}".`);
-
-    setTimeout(() => {
-        bot.sendMessage(chatId, `Напоминание для ${userName}: "${reminder}"`, { parse_mode: 'Markdown' });
-    }, minutes * 60 * 1000);
-});
-
-
 
 bot.onText(/\/старт/, (msg) => {
     const chatId = msg.chat.id;
