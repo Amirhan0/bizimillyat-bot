@@ -4,11 +4,9 @@ const TelegramBot = require("node-telegram-bot-api");
 const BOT_TOKEN = '7882038455:AAGjDAlwlQP2FO2WklvL7WxfjQcht34N7gE';
 const bot = new TelegramBot(BOT_TOKEN);
 
-// Создаем Express-приложение
 const app = express();
 app.use(bodyParser.json());
 
-// Устанавливаем вебхук для бота
 const PORT = 3000;
 bot.setWebHook(`https://bizimillyat-bot.onrender.com/${BOT_TOKEN}`);
 
@@ -152,15 +150,13 @@ bot.onText(/\/помощь/, (msg) => {
 3. Автоматически удаляю неактивных пользователей, если они не проявляют активности после вступления в чат.
 4. Отправляю благодарственные сообщения за активность.
 5. Регистрирую, когда участник покидает чат.
-6. Отвечаю на вопросы с использованием искусственного интеллекта.
-7. Кидаю цитаты стетхема - /цитата
+6. Кидаю цитаты стетхема - /цитата
 Если у тебя есть вопросы, пиши сюда!
 `;
 
     bot.sendMessage(chatId, helpMessage);
 });
 
-// Массив цитат
 const stathamQuotes = [
     "Работа не волк. Никто не волк. Только волк — волк.",
     "Настоящий мужчина, как ковер тети Зины — с каждым годом лысеет.",
@@ -184,14 +180,11 @@ const stathamQuotes = [
     "Делайте то, что любите, и не забывайте о тех, кто был с вами на этом пути."
 ];
 
-// Команда /цитата
 bot.onText(/\/цитата/, (msg) => {
     const chatId = msg.chat.id;
     const randomQuote = getRandomPhrase(stathamQuotes);
     bot.sendMessage(chatId, randomQuote);
 });
-
-// Команда для установки напоминания
 bot.onText(/\/напомни (.+) через (\d+) минут/, (msg, match) => {
     const chatId = msg.chat.id;
     const reminder = match[1];
@@ -207,7 +200,44 @@ bot.onText(/\/напомни (.+) через (\d+) минут/, (msg, match) => 
 });
 
 
-// Запуск сервера
+
+bot.onText(/\/старт/, (msg) => {
+    const chatId = msg.chat.id;
+    
+    const options = {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: "Помощь", callback_data: 'help' }],
+                [{ text: "Цитата", callback_data: 'quote' }]
+            ]
+        }
+    };
+    
+    bot.sendMessage(chatId, 'Выберите действие:', options);
+});
+
+bot.on('callback_query', (callbackQuery) => {
+    const message = callbackQuery.message;
+    const data = callbackQuery.data;
+
+    if (data === 'help') {
+        bot.sendMessage(message.chat.id, `
+Салам алейкум! Вот что я умею:
+1. Приветствую новых участников чата.
+2. Проверяю активность участников и напоминаю о себе, если ты долго не отвечаешь.
+3. Автоматически удаляю неактивных пользователей, если они не проявляют активности после вступления в чат.
+4. Отправляю благодарственные сообщения за активность.
+5. Регистрирую, когда участник покидает чат.
+6. Кидаю цитаты стетхема - /цитата
+Если у тебя есть вопросы, пиши сюда!
+        `);
+    } else if (data === 'quote') {
+        const randomQuote = getRandomPhrase(stathamQuotes);
+        bot.sendMessage(message.chat.id, randomQuote);
+    }
+});
+
+
 app.listen(PORT, () => {
     console.log(`Бот запущен на порту ${PORT}`);
 });
