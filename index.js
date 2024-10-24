@@ -89,10 +89,6 @@ bot.on('new_chat_members', async (msg) => {
     } else {
         memberTag = `[${newMember.first_name}](tg://user?id=${newMember.id})`; 
     }
-
-    const voiceFile = 'salam.mp3';
-
-     await bot.sendVoice(chatId, voiceFile);
     const welcomeMessage = getRandomPhrase(greetings).replace("{name}", memberTag);
     bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
 
