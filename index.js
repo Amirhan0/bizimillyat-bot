@@ -20,7 +20,6 @@ function getRandomPhrase(phrases) {
     const randomIndex = Math.floor(Math.random() * phrases.length);
     return phrases[randomIndex];
 }
-с
 const greetings = [
     "Ассаламу алейкум, {name}! Добро пожаловать, дорогой!",
     "Ассаламу алейкум, {name}, увидел тебя и сразу стало лучше!",
