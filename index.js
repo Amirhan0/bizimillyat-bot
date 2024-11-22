@@ -165,41 +165,12 @@ bot.onText(/\/помощь/, (msg) => {
     4. Отправляю благодарственные сообщения за активность.
     5. Фиксирую, когда участник покидает чат.
     6. Показываю цитаты Джейсона Стэтхема - /цитата.
-    7. Выбираю кто - /кто.
     
     Если у тебя есть вопросы, пиши сюда!    
 `;
 
     bot.sendMessage(chatId, helpMessage);
 });
-
-bot.onText(/\/кто(.+)?/, async (msg, match) => {
-    const chatId = msg.chat.id;
-    const userQuery = match[1]?.trim() || "мне нравится";
-
-    try {
-    
-        const chatMembers = await bot.getChatAdministrators(chatId);
-        const allUsers = chatMembers.map(member => member.user).filter(user => !user.is_bot);
-
-        if (allUsers.length === 0) {
-            bot.sendMessage(chatId, "Не нашел никого в чате для выбора!");
-            return;
-        }
-
-        const randomUser = allUsers[Math.floor(Math.random() * allUsers.length)];
-        const userTag = randomUser.username
-            ? `@${randomUser.username}`
-            : `[${randomUser.first_name}](tg://user?id=${randomUser.id})`;
-
-        const response = `${userTag} ${userQuery}!`;
-        bot.sendMessage(chatId, response, { parse_mode: "Markdown" });
-    } catch (error) {
-        console.error("Ошибка обработки команды /кто:", error);
-        bot.sendMessage(chatId, "Что-то пошло не так. Попробуй ещё раз!");
-    }
-});
-
 
 const stathamQuotes = [
     "Настоящий мужчина не плачет. Он идёт пить чай с вареньем.",
