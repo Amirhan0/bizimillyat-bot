@@ -1,14 +1,21 @@
+require('dotenv').config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const TelegramBot = require("node-telegram-bot-api");
-const BOT_TOKEN = '7882038455:AAGjDAlwlQP2FO2WklvL7WxfjQcht34N7gE';
+const BOT_TOKEN = process.env.BOT_TOKEN;
 const bot = new TelegramBot(BOT_TOKEN);
 
 const app = express();
 app.use(bodyParser.json());
 
 const PORT = 3000;
-bot.setWebHook(`https://bizimillyat-bot.onrender.com/${BOT_TOKEN}`);
+
+bot.setWebHook(`https://bizimillyat-bot.onrender.com/${BOT_TOKEN}`)
+    .then(() => console.log("Вебхук успешен"))
+    .catch((err) => {
+        console.error("Ошибка:", err);
+        process.exit(1);
+    });
 
 app.post(`/${BOT_TOKEN}`, (req, res) => {
     const update = req.body;
@@ -134,9 +141,18 @@ bot.on('message', (msg) => {
 bot.on('left_chat_member', (msg) => {
     const leftMember = msg.left_chat_member;
     const chatId = msg.chat.id;
+    const userId = leftMember.id;
+
+    if (awaitingResponses[userId]) {
+        clearTimeout(awaitingResponses[userId].timeout);
+        clearTimeout(awaitingResponses[userId].kickTimeout);
+        delete awaitingResponses[userId];
+    }
+
     const leaveMessage = getRandomPhrase(leaveMessages).replace("{name}", leftMember.first_name);
     bot.sendMessage(chatId, leaveMessage);
 });
+
 
 bot.onText(/\/помощь/, (msg) => {
     const chatId = msg.chat.id;
@@ -149,6 +165,7 @@ bot.onText(/\/помощь/, (msg) => {
     4. Отправляю благодарственные сообщения за активность.
     5. Фиксирую, когда участник покидает чат.
     6. Показываю цитаты Джейсона Стэтхема - /цитата.
+    7. Выбираю кто - /кто.
     
     Если у тебя есть вопросы, пиши сюда!    
 `;
@@ -156,27 +173,53 @@ bot.onText(/\/помощь/, (msg) => {
     bot.sendMessage(chatId, helpMessage);
 });
 
+bot.onText(/\/кто(.+)?/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const userQuery = match[1]?.trim() || "мне нравится";
+
+    try {
+    
+        const chatMembers = await bot.getChatAdministrators(chatId);
+        const allUsers = chatMembers.map(member => member.user).filter(user => !user.is_bot);
+
+        if (allUsers.length === 0) {
+            bot.sendMessage(chatId, "Не нашел никого в чате для выбора!");
+            return;
+        }
+
+        const randomUser = allUsers[Math.floor(Math.random() * allUsers.length)];
+        const userTag = randomUser.username
+            ? `@${randomUser.username}`
+            : `[${randomUser.first_name}](tg://user?id=${randomUser.id})`;
+
+        const response = `${userTag} ${userQuery}!`;
+        bot.sendMessage(chatId, response, { parse_mode: "Markdown" });
+    } catch (error) {
+        console.error("Ошибка обработки команды /кто:", error);
+        bot.sendMessage(chatId, "Что-то пошло не так. Попробуй ещё раз!");
+    }
+});
+
+
 const stathamQuotes = [
-    "Работа не волк. Никто не волк. Только волк — волк.",
-    "Настоящий мужчина, как ковер тети Зины — с каждым годом лысеет.",
-    "Мама учила не ругаться матом, но жизнь научила не ругаться матом при маме.",
-    "Если закрыть глаза, становится темно.",
-    "Если тебе где-то не рады в рваных носках, то и в целых туда идти не стоит.",
-    "«Жи-ши» пиши от души.",
-    "В Риме был, а папы не видал.",
-    "Тут — это вам не там.",
-    "Кто рано встает — тому весь день спать хочется.",
-    "Если ты смелый, ловкий и очень сексуальный — иди домой, ты пьян.",
-    "Сила – не в бабках. Ведь бабки – уже старые.",
-    "Из проведённых 64-х боёв у меня 64 победы. Все бои были с тенью.",
-    "Взял нож - режь, взял дошик - ешь.",
-    "Я живу, как карта ляжет. Ты живёшь, как мамка скажет.",
-    "Никогда не сдавайтесь, идите к своей цели и не забывайте, что победа — это не только цель, но и путь.",
-    "Успех — это результат хорошей подготовки, тяжелой работы и обучения от неудач.",
-    "Жизнь — это не просто проход через мясорубку, это шанс научиться.",
-    "Секрет успеха — это работать над своим делом, даже когда никто не смотрит.",
-    "Каждый из нас делает ошибки, важно извлекать уроки из них.",
-    "Делайте то, что любите, и не забывайте о тех, кто был с вами на этом пути."
+    "Настоящий мужчина не плачет. Он идёт пить чай с вареньем.",
+    "Не ошибается тот, кто ничего не делает. И даже он иногда ошибается.",
+    "Чтобы добиться успеха, нужно вставать пораньше... и сразу ложиться обратно.",
+    "Мудрость приходит с опытом, но иногда опыт приходит один.",
+    "Знания — это сила. А сила — это возможность открыть банку огурцов.",
+    "Лучше поздно, чем ещё позже.",
+    "Если ты встал не с той ноги, то ляг обратно и попробуй ещё раз.",
+    "Настоящий мужчина всегда знает, что хочет... и обязательно забывает об этом через минуту.",
+    "Жизнь — это не только борьба, но и обеденный перерыв.",
+    "Сложности закаляют характер... если ты, конечно, их пережил.",
+    "Кто ищет смысл жизни, тот пропускает ужин.",
+    "Если не можешь победить — притворись, что ты вообще не при делах.",
+    "Успех — это когда ты забыл, что у тебя выходной, и пошёл на работу.",
+    "Чтобы оставаться молодым, нужно просто не смотреть в паспорт.",
+    "Сначала ты работаешь на репутацию, а потом она работает на тебя... если повезёт.",
+    "Опыт — это то, что остаётся после того, как забудешь всё остальное.",
+    "У кого не спрашивай, у всех «нормально».",
+    "План был идеальный, но идеальность решила отдохнуть."
 ];
 
 bot.onText(/\/цитата/, (msg) => {
