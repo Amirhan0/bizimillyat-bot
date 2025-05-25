@@ -124,7 +124,7 @@ bot.on('new_chat_members', async (msg) => {
 });
 ;
 bot.onText(/\/спроси (.+)/, async (msg, match) => {
-    const chatId = msh.chat.id;
+    const chatId = msg.chat.id;
     const userQuestion = match[1];
 
     await bot.sendMessage(chatId, 'Думаю...');
