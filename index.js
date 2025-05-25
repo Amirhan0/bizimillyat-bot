@@ -4,6 +4,7 @@ const bodyParser = require("body-parser");
 const TelegramBot = require("node-telegram-bot-api");
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const bot = new TelegramBot(BOT_TOKEN);
+const axios = require('axios');
 
 const app = express();
 app.use(bodyParser.json());
@@ -51,9 +52,9 @@ const thankYouMessages = [
 
 const leaveMessages = [
     "Ох, {name} покинул нас...",
-"{name}, прощай, до встречи!",
-"До свидания, {name}. Возвращайся ещё!",
-"Жаль, что {name} больше с нами нет."
+    "{name}, прощай, до встречи!",
+    "До свидания, {name}. Возвращайся ещё!",
+    "Жаль, что {name} больше с нами нет."
 ];
 
 function wait(sec) {
@@ -87,13 +88,13 @@ bot.on('new_chat_members', async (msg) => {
     const newMember = msg.new_chat_member;
     const chatId = msg.chat.id;
 
-    await wait(5); 
+    await wait(5);
 
     let memberTag;
     if (newMember.username) {
-        memberTag = `@${newMember.username}`; 
+        memberTag = `@${newMember.username}`;
     } else {
-        memberTag = `[${newMember.first_name}](tg://user?id=${newMember.id})`; 
+        memberTag = `[${newMember.first_name}](tg://user?id=${newMember.id})`;
     }
     const welcomeMessage = getRandomPhrase(greetings).replace("{name}", memberTag);
     bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
@@ -116,11 +117,40 @@ bot.on('new_chat_members', async (msg) => {
                         bot.sendMessage(chatId, `${newMember.first_name}, давай, дружище, ты хотя бы поздоровайся!.`);
                         delete awaitingResponses[newMember.id];
                     }
-                }, 1200000); 
+                }, 1200000);
             }
         }, 10000)
     };
 });
+;
+bot.onText(/\/спроси (.+)/, async (msg, match) => {
+    const chatId = msh.chat.id;
+    const userQuestion = match[1];
+
+    await bot.sendMessage(chatId, 'Думаю...');
+
+    try {
+        const response = await axios.post(
+            'https://openrouter.ai/api/v1/chat/completions',
+            {
+                model: 'mistral/mistral-7b-instruct:free',
+                messages: [{ role: "user", content: userQuestion }]
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        const answer = response.data.choices[0].message.content;
+        bot.sendMessage(chatId, answer);
+    } catch (error) {
+        console.error("Ошибка AI:", error?.response?.data || error);
+        bot.sendMessage(chatId, "⚠️ Не удалось получить ответ от ИИ. Попробуй позже.");
+    }
+})
 
 bot.on('message', (msg) => {
     const userId = msg.from.id;
@@ -201,7 +231,7 @@ bot.onText(/\/цитата/, (msg) => {
 
 bot.onText(/\/старт/, (msg) => {
     const chatId = msg.chat.id;
-    
+
     const options = {
         reply_markup: {
             inline_keyboard: [
@@ -210,7 +240,7 @@ bot.onText(/\/старт/, (msg) => {
             ]
         }
     };
-    
+
     bot.sendMessage(chatId, 'Выберите действие:', options);
 });
 
